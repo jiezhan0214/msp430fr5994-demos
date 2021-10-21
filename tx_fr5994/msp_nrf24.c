@@ -69,7 +69,7 @@ void nrf24_init() {
     __delay_cycles(82400);
 
     // Clear all IRQ flags
-    nrf24_wr_reg(RF24_STATUS, RF24_RX_DR | RF24_TX_DS | RF24_MAX_RT);   
+    nrf24_wr_reg(RF24_STATUS, RF24_RX_DR | RF24_TX_DS | RF24_MAX_RT);
     // Close all pipes
     nrf24_wr_reg(RF24_EN_RXADDR, 0x00);     // Enable Rx data pipe 0 only
     nrf24_wr_reg(RF24_EN_AA, 0x00);         // Clear all auto acks
@@ -85,8 +85,8 @@ void nrf24_init() {
     nrf24_wr_reg(RF24_SETUP_AW, 0x03);
     // Set pipe 0 payload width
     nrf24_wr_reg(RF24_RX_PW_P0, 32);        // Pipe 0, 32 bytes
-    // Power down, clear CRC
-    nrf24_wr_reg(RF24_CONFIG, 0x00);
+    // Power down, enable 1 byte CRC
+    nrf24_wr_reg(RF24_CONFIG, RF24_EN_CRC);
 
     nrf24_cmd(RF24_FLUSH_TX);               // Flush TX FIFO
     nrf24_cmd(RF24_FLUSH_RX);               // Flush RX FIFO
@@ -128,7 +128,7 @@ void __attribute__((interrupt(RF_IRQ_PORT_VECTOR))) RF_IRQ_PORT_ISR() {
 
 // Enable Standby-I, 26uA power draw
 void nrf24_power_up() {
-	nrf24_wr_reg(RF24_CONFIG, RF24_PWR_UP);
+    nrf24_wr_reg(RF24_CONFIG, RF24_PWR_UP | RF24_EN_CRC);
     __delay_cycles(12000);  // Should be in Standby-I in 1.5ms
 }
 
@@ -136,8 +136,8 @@ void nrf24_w_tx_addr(uint8_t* addr) {
     RF_SPI_BEGIN();
     nrf24_spi_transaction(RF24_TX_ADDR | RF24_W_REGISTER);
     for (int i = 4; i >= 0; --i) {
-		nrf24_spi_transaction(addr[i]);
-	}
+        nrf24_spi_transaction(addr[i]);
+    }
     RF_SPI_END();
 }
 
@@ -145,24 +145,24 @@ void nrf24_w_rx_addr_p0(uint8_t *addr) {
     RF_SPI_BEGIN();
     nrf24_spi_transaction(RF24_RX_ADDR_P0 | RF24_W_REGISTER);
     for (int i = 4; i >= 0; --i) {
-		nrf24_spi_transaction(addr[i]);
-	}
+        nrf24_spi_transaction(addr[i]);
+    }
     RF_SPI_END();
 }
 
 void nrf24_open_pipe(uint8_t pipeid) {
-	if (pipeid > 5)
-		return;
-	nrf24_wr_reg(RF24_EN_RXADDR, (1 << pipeid));
+    if (pipeid > 5)
+        return;
+    nrf24_wr_reg(RF24_EN_RXADDR, (1 << pipeid));
 }
 
 uint8_t nrf24_r_rx_payload(uint8_t *data, uint8_t len) {
-	RF_SPI_BEGIN();
+    RF_SPI_BEGIN();
     uint8_t rf_status = nrf24_spi_transaction(RF24_R_RX_PAYLOAD);
-	for (uint8_t i = 0; i < len; ++i) {
-		data[i]  = nrf24_spi_transaction(RF24_NOP);
-	}
-	RF_SPI_END();
-	// The RX pipe this data belongs to is stored in STATUS
-	return ((rf_status & 0x0E) >> 1);
+    for (uint8_t i = 0; i < len; ++i) {
+        data[i]  = nrf24_spi_transaction(RF24_NOP);
+    }
+    RF_SPI_END();
+    // The RX pipe this data belongs to is stored in STATUS
+    return ((rf_status & 0x0E) >> 1);
 }

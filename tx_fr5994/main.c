@@ -23,7 +23,7 @@
 //                             0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
 //                             0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
 //                             0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
-uint8_t dummy_payload[32] = "Hi Baobeie, how are you today?\n\r";
+uint8_t dummy_payload[32] = "Hiya Baobeie, how are you today?";
 
 uint8_t tx_addr[5] = "latte";
 
@@ -142,7 +142,7 @@ int main(void) {
         // nrf24_wr_reg(RF24_STATUS, RF24_RX_DR | RF24_TX_DS | RF24_MAX_RT);
 
         /*** Power down ***/
-        nrf24_wr_reg(RF24_CONFIG, 0x00);
+        nrf24_wr_reg(RF24_CONFIG, RF24_EN_CRC);
 
 #ifdef PROFILE
         P3OUT &= ~BIT0;

@@ -77,7 +77,7 @@ void uart_init(void) {
     UCA0CTL1 &= ~UCSWRST;
 }
 
-void uart_send_str_sz(char* str, unsigned sz) {
+void uart_send_str_sz(uint8_t* str, unsigned sz) {
     UCA0IFG &= ~UCTXIFG;
     while (sz--) {
         UCA0TXBUF = *str++;
@@ -85,6 +85,40 @@ void uart_send_str_sz(char* str, unsigned sz) {
         UCA0IFG &= ~UCTXIFG;
     }
 }
+
+void uart_send_str(char* str) {
+    UCA0IFG &= ~UCTXIFG;
+    while (*str != '\0') {
+        UCA0TXBUF = *str++;
+        while (!(UCA0IFG & UCTXIFG)) {}
+        UCA0IFG &= ~UCTXIFG;
+    }
+}
+
+/* unsigned int to string, decimal format */
+char* uitoa_10(unsigned num, char* const str) {
+    // calculate decimal
+    char* ptr = str;
+    unsigned modulo;
+    do {
+        modulo = num % 10;
+        num /= 10;
+        *ptr++ = '0' + modulo;
+    } while (num);
+
+    // reverse string
+    *ptr-- = '\0';
+    char* ptr1 = str;
+    char tmp_char;
+    while (ptr1 < ptr) {
+        tmp_char = *ptr;
+        *ptr--= *ptr1;
+        *ptr1++ = tmp_char;
+    }
+
+    return str;
+}
+
 
 int main(void) {
     /*** Initialization stack ***/
@@ -110,12 +144,13 @@ int main(void) {
     // Clear all IRQ flags
     nrf24_wr_reg(RF24_STATUS, RF24_RX_DR | RF24_TX_DS | RF24_MAX_RT);
     // Power up in PRX mode
-    nrf24_wr_reg(RF24_CONFIG, RF24_PWR_UP | RF24_PRIM_RX);
+    nrf24_wr_reg(RF24_CONFIG, RF24_PWR_UP | RF24_PRIM_RX | RF24_EN_CRC);
     __delay_cycles(12000);  // Should be in Standby-I in 1.5ms
     nrf24_enable_irq();
-	RF_TRX_BEGIN();
+    RF_TRX_BEGIN();
 
-    
+    unsigned packet_cnt = 0;
+    char str_buf[32];
 
     /* ------ Test: Power Down -> Standby-I -> Tx Mode -> Standby-I -> Power Down ------ */
     for (;;) {
@@ -124,6 +159,12 @@ int main(void) {
         nrf24_r_rx_payload(buf, 32);
         nrf24_wr_reg(RF24_STATUS, RF24_RX_DR);
         P1OUT ^= BIT0;
+
+        ++packet_cnt;
+        uart_send_str("Packet ");
+        uart_send_str(uitoa_10(packet_cnt, str_buf));
+        uart_send_str(": ");
         uart_send_str_sz(buf, 32);
+        uart_send_str("\n\r");
     }
 }
