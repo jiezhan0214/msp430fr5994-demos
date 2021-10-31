@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.1)
 
 set(TARGET_NAME "tx_fr5994")
 set(DEVICE "msp430fr5994")
-set(USB_PORT usbmodem1421401)
+set(USB_PORT usbmodem142301)
 
 add_executable(
     ${TARGET_NAME}

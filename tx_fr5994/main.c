@@ -14,7 +14,7 @@
 #include "msp_nrf24.h"
 #include "nRF24L01.h"
 
-// #define BLINK
+#define BLINK
 // #define PROFILE
 
 
@@ -43,7 +43,7 @@ void clk_init(void) {
 }
 
 void timer_init(void) {
-    TA0CCR0 = 10000;             // 7150 = ~1s
+    TA0CCR0 = 5000;             // 7150 = ~1s
     TA0CTL = TASSEL__ACLK;      // ACLK (VLO ~9.4kHz), divided by 1
     TA0CCTL0 = CCIE;            // TACCR0 interrupt enabled
 }
@@ -51,7 +51,7 @@ void timer_init(void) {
 // Timer0_A0 interrupt service routine
 void __attribute__((interrupt(TIMER0_A0_VECTOR))) Timer0_A0_ISR(void) {
     TA0CTL &= ~MC;  // Halt timer
-    __bic_SR_register_on_exit(LPM3_bits | GIE);
+    __low_power_mode_off_on_exit();
 }
 
 void gpio_init(void) {
@@ -97,14 +97,13 @@ int main(void) {
     PM5CTL0 &= ~LOCKLPM5;
 
     nrf24_init();
-    nrf24_w_tx_addr(tx_addr);
     nrf24_enable_irq();
 
     /* ------ Test: Power Down -> Standby-I -> Tx Mode -> Standby-I -> Power Down ------ */
     for (;;) {
         /* Sleep in LPM3 */
         TA0CTL |= MC__UP;
-        __bis_SR_register(LPM3_bits | GIE);
+        __low_power_mode_3();
 
 #ifdef BLINK
         P1OUT ^= BIT0;
@@ -113,6 +112,7 @@ int main(void) {
         P3OUT |= BIT0;
 #endif
 
+        nrf24_w_tx_addr(tx_addr);
         /*** Write payload to Tx Fifo ***/
         // 1 level
         nrf24_w_payload(dummy_payload, 32);
@@ -138,8 +138,8 @@ int main(void) {
         /*** Wait for Tx done ***/
         nrf24_wait_tx_done();
         // Clear power-up data sent flag
-        nrf24_wr_reg(RF24_STATUS, RF24_TX_DS);
-        // nrf24_wr_reg(RF24_STATUS, RF24_RX_DR | RF24_TX_DS | RF24_MAX_RT);
+        // nrf24_wr_reg(RF24_STATUS, RF24_TX_DS);
+        nrf24_wr_reg(RF24_STATUS, RF24_RX_DR | RF24_TX_DS | RF24_MAX_RT);
 
         /*** Power down ***/
         nrf24_wr_reg(RF24_CONFIG, RF24_EN_CRC);

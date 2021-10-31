@@ -154,10 +154,14 @@ int main(void) {
 
     /* ------ Test: Power Down -> Standby-I -> Tx Mode -> Standby-I -> Power Down ------ */
     for (;;) {
+        P1OUT |= BIT1;
         __bis_SR_register(LPM0_bits | GIE);
+        P1OUT &= ~BIT1;
 
         nrf24_r_rx_payload(buf, 32);
-        nrf24_wr_reg(RF24_STATUS, RF24_RX_DR);
+        nrf24_wr_reg(RF24_STATUS, RF24_RX_DR |      // Clear data received flag
+                                  RF24_TX_DS |      // Clear data sent and max_rt flags just in case
+                                  RF24_MAX_RT);     // ..otherwise IRQ may never work anymore
         P1OUT ^= BIT0;
 
         ++packet_cnt;
